@@ -193,20 +193,20 @@ def replace_incomplete_with_mean(dataFrame: pd.core.frame.DataFrame):
     return df'''
 
 
-data = open_csv_file(train_file)
+# data = open_csv_file(train_file)
 
-data2 = center_gesture(data)
+# data2 = center_gesture(data)
 
-data3 = scale_gesture(data2)
+# data3 = scale_gesture(data2)
 
-data4 = replace_mean_incomplete_rows(data)
+# data4 = replace_mean_incomplete_rows(data)
 
-data5 = remove_incomplete_rows(data)
+# data5 = remove_incomplete_rows(data)
 
 #data6 = replace_incomplete_with_mean(data)
 
 #visualize_gesture_skeleton(data5)
-visualize_one_gesture_skeleton(data5, 1)
+# visualize_one_gesture_skeleton(data5, 1)
 
 
 

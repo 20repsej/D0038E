@@ -73,7 +73,7 @@ def categorize_data_for_training(filename, use_preprocessing):
         for joint_index in range(20):
             # Get all 12 dimensions and put them together as an array (vector), also get class
             # There are 4 types to look at, each contains 20*3D vectors and is therefore 60 columns wide
-            joint_vector = pd.concat([row[joint_index*3:joint_index*3+3], row[60+joint_index*3:60+joint_index*3+3], row[120+joint_index*3:120+joint_index*3+3], row[180+joint_index*3:180+joint_index*3+3]])
+            joint_vector = pd.concat([row[joint_index*3:joint_index*3+3], row[60+joint_index*3:60+joint_index*3+3], row[120+joint_index*3:120+joint_index*3+3], row[180+joint_index*3:180+joint_index*3+3]]).apply(pd.to_numeric)
             joint_class = row.iloc[240]
 
             # Then add them with their respective class to the joints array
@@ -107,7 +107,7 @@ def categorize_data_for_testing(filename, use_preprocessing):
         for joint_index in range(20):
             # Get all 12 dimensions and put them together as an array (vector), also get class
             # There are 4 types to look at, each contains 20*3D vectors and is therefore 60 columns wide
-            joint_vector = pd.concat([row[joint_index*3:joint_index*3+3], row[60+joint_index*3:60+joint_index*3+3], row[120+joint_index*3:120+joint_index*3+3], row[180+joint_index*3:180+joint_index*3+3]])
+            joint_vector = pd.concat([row[joint_index*3:joint_index*3+3], row[60+joint_index*3:60+joint_index*3+3], row[120+joint_index*3:120+joint_index*3+3], row[180+joint_index*3:180+joint_index*3+3]]).apply(pd.to_numeric)
 
             # Then add them with their respective class to the joints array
             new_case.joints.append(joint_vector)
@@ -203,4 +203,4 @@ run_model_test("Decision tree", lambda: DecisionTreeClassifier(), training_data,
 run_model_test("Random forest", lambda: RandomForestClassifier(n_estimators=70), training_data, test_data)
 
 # Run MLP test (broken)
-# run_model_test("MLP", lambda: MLPClassifier(), training_data, test_data)
+run_model_test("MLP", lambda: MLPClassifier(), training_data, test_data)

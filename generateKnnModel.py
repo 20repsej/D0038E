@@ -51,13 +51,15 @@ def perform_preprocess(data):
     return scale_gesture(center_gesture(data))
 
 # Categorizes data by joint
-def categorize_data_for_training(filename):
+def categorize_data_for_training(filename, use_preprocessing):
     # Read csv with pandas to allow easy iteration over rows, also remove broken rows
     raw_data = pd.read_csv(filename).dropna()
     raw_data.columns = generate_column_labels()
 
     # Run preprocessing
-    processed_data = perform_preprocess(raw_data)
+    processed_data = raw_data
+    if use_preprocessing:
+        processed_data = perform_preprocess(raw_data)
 
     # Prepare the joints array (see comment below for how this is structured)
     joints = []
@@ -81,13 +83,15 @@ def categorize_data_for_training(filename):
     return joints
 
 # Categorizes data by row/gesture
-def categorize_data_for_testing(filename):
+def categorize_data_for_testing(filename, use_preprocessing):
     # Read csv with pandas to allow easy iteration over rows, also remove broken rows
     raw_data = pd.read_csv(filename).dropna()
     raw_data.columns = generate_column_labels()
 
     # Run preprocessing
-    processed_data = perform_preprocess(raw_data)
+    processed_data = raw_data
+    if use_preprocessing:
+        processed_data = perform_preprocess(raw_data)
 
     # Create a list of all test cases
     test_cases = []
@@ -113,9 +117,9 @@ def categorize_data_for_testing(filename):
     return test_cases
 
 # Prepare data for model application
-def apply_model_vote(test_case, models, joint_evals):
+def apply_model_vote(test_case, models):
     # Based on unmodified accuracy of guesses
-    # joint_modifiers = [0.1751, 0.1638, 0.2524, 0.2919, 0.3616, 0.4407, 0.5367, 0.6629, 0.533, 0.7307, 0.2053, 0.2072, 0.2166, 0.2241, 0.2109, 0.1902, 0.2072, 0.2524, 0.29, 0.2618]
+    joint_modifiers = [0.1751, 0.1638, 0.2524, 0.2919, 0.3616, 0.4407, 0.5367, 0.6629, 0.533, 0.7307, 0.2053, 0.2072, 0.2166, 0.2241, 0.2109, 0.1902, 0.2072, 0.2524, 0.29, 0.2618]
 
     votes = {}
     for model_index in range(len(models)):
@@ -124,18 +128,12 @@ def apply_model_vote(test_case, models, joint_evals):
         guess = model.predict([test_case.joints[model_index]])[0]
         
         vote = 1
-        # vote = joint_modifiers[model_index]**2
+        vote = joint_modifiers[model_index]**2
 
         if guess in votes:
             votes[guess] += vote
         else:
             votes[guess] = vote
-
-        # TEMP, test individual joins' accuracy in guessing
-        # if guess == test_case.type:
-        #     joint_evals[model_index][0] += 1
-        # else:
-        #     joint_evals[model_index][1] += 1
         
     # Answer is the most voted for type
     answer = max(votes, key=votes.get)
@@ -149,7 +147,7 @@ def run_model_test(model_name, create_new_model, training_data, test_data):
     for model_index in range(len(training_data)):
         joint_evals.append([0, 0])
 
-        # Params can be changed
+        # Create model model of given type using inputted lambda func, then fit training data to model
         new_model = create_new_model()
         new_model.fit(training_data[model_index].points, training_data[model_index].classes)
         models.append(new_model)
@@ -159,7 +157,7 @@ def run_model_test(model_name, create_new_model, training_data, test_data):
     print(f"Running test ({model_name})...")
     model_eval = Result()
     for case in test_data:
-        guess = apply_model_vote(case, models, joint_evals)
+        guess = apply_model_vote(case, models)
         if guess == case.type:
             model_eval.correct += 1
         else:
@@ -168,6 +166,7 @@ def run_model_test(model_name, create_new_model, training_data, test_data):
     model_eval.print_result(model_name)
 
 def purge_joints(training_data, test_data, joints):
+    # Go from back to front so pops don't affect positions of later joints in the array
     joints.sort(reverse=True)
 
     # Purge from training data
@@ -182,34 +181,26 @@ def purge_joints(training_data, test_data, joints):
 
 # Compile the data
 print("Compiling data...")
-training_data = categorize_data_for_training(train_file)
-test_data = categorize_data_for_testing(test_file)
+use_preprocessing = True
+training_data = categorize_data_for_training(train_file, use_preprocessing)
+test_data = categorize_data_for_testing(test_file, use_preprocessing)
 
 # Purge some joints
-purge = [0, 1, 2, 3, 4, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
-print("Purging joints...", purge)
-purge_joints(training_data, test_data, purge)
+# purge = [0, 1, 2, 3, 4, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+# print("Purging joints...", purge)
+# purge_joints(training_data, test_data, purge)
 
 # Run kNN test
-# run_model_test("kNN", lambda: KNeighborsClassifier(n_neighbors=1, weights='distance'), training_data, test_data)
+run_model_test("kNN", lambda: KNeighborsClassifier(n_neighbors=1, weights='distance'), training_data, test_data)
 
 # Run SVM test
-# run_model_test("SVM", lambda: SVC(), training_data, test_data)
+run_model_test("SVM", lambda: SVC(), training_data, test_data)
 
 # Run Decision tree test
-# run_model_test("Decision tree", lambda: DecisionTreeClassifier(), training_data, test_data)
+run_model_test("Decision tree", lambda: DecisionTreeClassifier(), training_data, test_data)
 
 # Run Random forest test
-run_model_test("Random forest", lambda: RandomForestClassifier(), training_data, test_data)
+run_model_test("Random forest", lambda: RandomForestClassifier(n_estimators=70), training_data, test_data)
 
 # Run MLP test (broken)
 # run_model_test("MLP", lambda: MLPClassifier(), training_data, test_data)
-
-
-# Joint accuracies
-# print("\nJoint points:")
-# accuracies = []
-# for joint in joint_evals:
-#     correct, incorrect = joint
-#     accuracies.append(round(correct / (correct+incorrect), 4))
-# print(accuracies)

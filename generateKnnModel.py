@@ -1,11 +1,15 @@
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.neural_network import MLPClassifier
 import pandas as pd
 from part1Program import scale_gesture, center_gesture
 
 train_file = "train-final.csv"
 test_file = "test-final.csv"
 
-# Simple class to allow cleaner looking "."-indexing
+# Simple classes to allow cleaner looking "."-indexing
 class Joint:
     def __init__(self):
         self.points = []
@@ -15,6 +19,18 @@ class TestCase:
     def __init__(self):
         self.joints = []
         self.type = []
+
+# Keeping track of the models' results more easily by creating some simple methods
+class Result:
+    def __init__(self):
+        self.correct = 0
+        self.incorrect = 0
+    
+    def get_percentage(self):
+        return round(self.correct/(self.correct+self.incorrect)*100, 1)
+    
+    def print_result(self, model_name):
+        print(f"Model: {model_name}; Correct: {self.correct}; Incorrect: {self.incorrect}; Accuracy: {self.get_percentage()}%")
 
 # Code stolen and modified from jesper's part1Program.py
 def generate_column_labels():
@@ -99,7 +115,7 @@ def categorize_data_for_testing(filename):
 # Prepare data for model application
 def apply_model_vote(test_case, models, joint_evals):
     # Based on unmodified accuracy of guesses
-    joint_modifiers = [0.1751, 0.1638, 0.2524, 0.2919, 0.3616, 0.4407, 0.5367, 0.6629, 0.533, 0.7307, 0.2053, 0.2072, 0.2166, 0.2241, 0.2109, 0.1902, 0.2072, 0.2524, 0.29, 0.2618]
+    # joint_modifiers = [0.1751, 0.1638, 0.2524, 0.2919, 0.3616, 0.4407, 0.5367, 0.6629, 0.533, 0.7307, 0.2053, 0.2072, 0.2166, 0.2241, 0.2109, 0.1902, 0.2072, 0.2524, 0.29, 0.2618]
 
     votes = {}
     for model_index in range(len(models)):
@@ -107,7 +123,8 @@ def apply_model_vote(test_case, models, joint_evals):
         # We're doing this one case at a time, so result of .predict() will be an array of just one guess
         guess = model.predict([test_case.joints[model_index]])[0]
         
-        vote = joint_modifiers[model_index]**2
+        vote = 1
+        # vote = joint_modifiers[model_index]**2
 
         if guess in votes:
             votes[guess] += vote
@@ -115,14 +132,40 @@ def apply_model_vote(test_case, models, joint_evals):
             votes[guess] = vote
 
         # TEMP, test individual joins' accuracy in guessing
-        if guess == test_case.type:
-            joint_evals[model_index][0] += 1
-        else:
-            joint_evals[model_index][1] += 1
+        # if guess == test_case.type:
+        #     joint_evals[model_index][0] += 1
+        # else:
+        #     joint_evals[model_index][1] += 1
         
     # Answer is the most voted for type
     answer = max(votes, key=votes.get)
     return answer
+
+def run_model_test(model_name, create_new_model, training_data, test_data):
+    # Create separate models for all joints
+    print(f"Training models ({model_name})...")
+    models = []
+    joint_evals = []
+    for model_index in range(len(training_data)):
+        joint_evals.append([0, 0])
+
+        # Params can be changed
+        new_model = create_new_model()
+        new_model.fit(training_data[model_index].points, training_data[model_index].classes)
+        models.append(new_model)
+
+
+    # Run the test data through the voting process
+    print(f"Running test ({model_name})...")
+    model_eval = Result()
+    for case in test_data:
+        guess = apply_model_vote(case, models, joint_evals)
+        if guess == case.type:
+            model_eval.correct += 1
+        else:
+            model_eval.incorrect += 1
+
+    model_eval.print_result(model_name)
 
 def purge_joints(training_data, test_data, joints):
     joints.sort(reverse=True)
@@ -143,41 +186,30 @@ training_data = categorize_data_for_training(train_file)
 test_data = categorize_data_for_testing(test_file)
 
 # Purge some joints
-# purge = [0, 1, 2, 3, 4, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
-# print("Purging joints...", purge)
-# purge_joints(training_data, test_data, purge)
+purge = [0, 1, 2, 3, 4, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+print("Purging joints...", purge)
+purge_joints(training_data, test_data, purge)
 
-# Create 20 separate models for all joints
-print("Training models (kNN)...")
-kNN_models = []
-joint_evals = []
-for model_index in range(len(training_data)):
-    joint_evals.append([0, 0])
+# Run kNN test
+# run_model_test("kNN", lambda: KNeighborsClassifier(n_neighbors=1, weights='distance'), training_data, test_data)
 
-    # Params can be changed
-    kNN_model = KNeighborsClassifier(n_neighbors=1, weights='distance')
-    # print(training_data[model_index].points[539], training_data[model_index].classes[539])
-    kNN_model.fit(training_data[model_index].points, training_data[model_index].classes)
-    kNN_models.append(kNN_model)
+# Run SVM test
+# run_model_test("SVM", lambda: SVC(), training_data, test_data)
 
+# Run Decision tree test
+# run_model_test("Decision tree", lambda: DecisionTreeClassifier(), training_data, test_data)
 
-# Run the test data through the voting process
-print("Running test (kNN)...")
-correct = 0
-incorrect = 0
-for case in test_data:
-    guess = apply_model_vote(case, kNN_models, joint_evals)
-    if guess == case.type:
-        correct += 1
-    else:
-        incorrect += 1
+# Run Random forest test
+run_model_test("Random forest", lambda: RandomForestClassifier(), training_data, test_data)
 
-print(f"Correct: {correct}; Incorrect: {incorrect}; Accuracy: {round(correct/len(test_data)*100, 1)}%")
-print("Joint points:")
+# Run MLP test (broken)
+# run_model_test("MLP", lambda: MLPClassifier(), training_data, test_data)
+
 
 # Joint accuracies
-accuracies = []
-for joint in joint_evals:
-    correct, incorrect = joint
-    accuracies.append(round(correct / (correct+incorrect), 4))
-print(accuracies)
+# print("\nJoint points:")
+# accuracies = []
+# for joint in joint_evals:
+#     correct, incorrect = joint
+#     accuracies.append(round(correct / (correct+incorrect), 4))
+# print(accuracies)

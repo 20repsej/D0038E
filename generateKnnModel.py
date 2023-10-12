@@ -41,8 +41,8 @@ def generate_column_labels():
             for dimension in ["x", "y", "z"]:
                 column_labels.append(f"{joint_name}_{type}_{dimension}")
 
-    column_labels.append("gesture_number")
     column_labels.append("gesture_name")
+    column_labels.append("gesture_number")
 
     return column_labels
 
@@ -203,4 +203,4 @@ run_model_test("Decision tree", lambda: DecisionTreeClassifier(), training_data,
 run_model_test("Random forest", lambda: RandomForestClassifier(n_estimators=70), training_data, test_data)
 
 # Run MLP test (broken)
-run_model_test("MLP", lambda: MLPClassifier(), training_data, test_data)
+run_model_test("MLP", lambda: MLPClassifier(activation="tanh", solver="lbfgs", max_iter=500, tol=.0001), training_data, test_data)

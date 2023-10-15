@@ -8,6 +8,7 @@ import numpy as np
 from sklearn.svm import *
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.neural_network import MLPClassifier
 
 from sklearn.decomposition import PCA, KernelPCA
@@ -62,6 +63,7 @@ def fix_missing_values(dataFrame: pd.core.frame.DataFrame):
 def scale_data(data):
     scaler = StandardScaler()
     scaler = scaler.fit(data)
+
     scaled = scaler.transform(data)
     return scaled
 
@@ -70,7 +72,7 @@ def run_PCA(data):
     #pca = PCA()
     #data = pca.fit_transform(data)
     #return data
-    transformer = KernelPCA(n_components=7, kernel='linear')
+    transformer = PCA(n_components=30)
     X_transformed = transformer.fit_transform(data)
     return X_transformed
 
@@ -120,11 +122,6 @@ test_data = scale_data(test_data)
 # Run kNN test with and without bagging
 #run_model_test("kNN", lambda: KNeighborsClassifier(n_neighbors=1, weights='distance'), train_data, test_data, train_label, test_label)
 
-#run_model_test("kNN Bagging", lambda: BaggingClassifier(KNeighborsClassifier(n_neighbors=1, weights='distance'), max_samples=0.5, max_features=0.5), train_data, test_data, train_label, test_label)
-
-# Ada boost classifier
-run_model_test("Ada Boost", lambda: AdaBoostClassifier(n_estimators=100), train_data, test_data, train_label, test_label)
-
 # Run SVM test
 #run_model_test("SVM", lambda: SVC(decision_function_shape='ovo', kernel='rbf'), train_data, test_data, train_label, test_label)
 #run_model_test("SVM", lambda: SVC(decision_function_shape='ovo', kernel='linear'), train_data, test_data, train_label, test_label)
@@ -136,7 +133,18 @@ run_model_test("Ada Boost", lambda: AdaBoostClassifier(n_estimators=100), train_
 # Run Random forest test
 #run_model_test("Random forest 1", lambda: RandomForestClassifier(n_estimators=1), train_data, test_data, train_label, test_label)
 #run_model_test("Random forest 10", lambda: RandomForestClassifier(n_estimators=10), train_data, test_data, train_label, test_label)
-#run_model_test("Random forest 100", lambda: RandomForestClassifier(n_estimators=500), train_data, test_data, train_label, test_label)
+
+from threading import Thread
+for i in range(1, 2000):
+    Thread(target=run_model_test, args=(
+        f"Random forest {i}",
+        lambda: RandomForestClassifier(n_estimators=i),
+        train_data,
+        test_data,
+        train_label,
+        test_label
+    )).start()
+    #run_model_test("Random forest 100", lambda: RandomForestClassifier(n_estimators=i), train_data, test_data, train_label, test_label)
 
 # Run MLP test
 
@@ -151,7 +159,22 @@ run_model_test("Ada Boost", lambda: AdaBoostClassifier(n_estimators=100), train_
 #run_model_test("MLP", lambda: MLPClassifier(activation="tanh", solver="sgd", max_iter=100, tol=.0001), train_data, test_data, train_label, test_label)
 #run_model_test("MLP", lambda: MLPClassifier(activation="tanh", solver="adam", max_iter=100, tol=.0001), train_data, test_data, train_label, test_label)
 
-# 
+#
 #run_model_test("MLP", lambda: MLPClassifier(activation="tanh", solver="lbfgs",hidden_layer_sizes=10, max_iter=500, tol=.0001), train_data, test_data, train_label, test_label)
 #run_model_test("MLP", lambda: MLPClassifier(activation="tanh", solver="lbfgs",hidden_layer_sizes=100, max_iter=500, tol=.0001), train_data, test_data, train_label, test_label)
 #run_model_test("MLP", lambda: MLPClassifier(activation="tanh", solver="lbfgs",hidden_layer_sizes=300, max_iter=500, tol=.0001), train_data, test_data, train_label, test_label)
+
+
+#
+# Ensembles
+#
+
+# Ada boost classifier
+#run_model_test("Ada Boost", lambda: AdaBoostClassifier(n_estimators=100), train_data, test_data, train_label, test_label)
+
+#run_model_test("kNN Bagging", lambda: BaggingClassifier(KNeighborsClassifier(n_neighbors=1, weights='distance'), max_samples=0.5, max_features=0.5), train_data, test_data, train_label, test_label)
+
+# Random forest with Extremly Randmoized Trees
+#clf = ExtraTreesClassifier(n_estimators=10, max_depth=None, min_samples_split=2, random_state=0)
+
+#run_model_test("ExtraTrees", lambda: ExtraTreesClassifier(n_estimators=1000, max_depth=None, min_samples_split=2, random_state=0), train_data, test_data, train_label, test_label)
